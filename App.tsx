@@ -1,118 +1,141 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
+/* eslint-disable no-alert */
 import React from 'react';
-import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  useColorScheme,
-  View,
+  Linking,
+  Alert,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
+import WebView from 'react-native-webview';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+type SendIntentButtonProps = {
+  action: string;
+  children?: string;
+  extras?: Array<{
+    key: string;
+    value: string | number | boolean;
+  }>;
+};
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+const App = () => {
+  // const webviewRef = useRef();
+  function onMessage(data: any) {
+    if (data.nativeEvent.data) {
+      const receivedData = JSON.parse(data.nativeEvent.data);
+      if (receivedData?.type === 0) {
+        alert(receivedData.data);
+      } else if (receivedData?.type === 1) {
+        openApp(receivedData.data);
+      }
+    }
+  }
+  const sendIntent = async ({action, extras}: SendIntentButtonProps) => {
+    if (Platform.OS === 'android') {
+      try {
+        await Linking.sendIntent(action, extras);
+      } catch (e: any) {
+        Alert.alert(e.message);
+      }
+    }
   };
+  const openCamera = () => {
+    if (Platform.OS === 'android') {
+      sendIntent({action: 'android.media.action.IMAGE_CAPTURE'});
+      return;
+    }
+    // const result = await ImagePicker.launchCameraAsync({
+    //   mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //   allowsEditing: true,
+    //   aspect: [4, 3],
+    //   quality: 1
+    // });
+  };
+  const requestCameraPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: 'Camera Permission',
+            message: 'This app needs access to your camera.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          openCamera();
+        } else {
+          Alert.alert('Camera permission denied');
+        }
+      } catch (e: any) {
+        Alert.alert(e.message);
+      }
+    }
+  };
+  const openPhoto = () => {
+    if (Platform.OS === "android") {
+      Linking.openURL("content://media/internal/images/media");
+    } else {
+      Linking.openURL("photos-redirect://");
+    }
+  };
+  const openApp = (data: any) => {
+    if (data === 'photo') {
+      openPhoto();
+      return;
+    }
 
+    if (data === 'youtube') {
+      const url = 'https://www.youtube.com/';
+      Linking.canOpenURL(url)
+        .then(supported => {
+          console.log(supported);
+          if (supported) {
+            Linking.openURL(url);
+          } else {
+            Alert.alert(
+              'App Not Found',
+              'The app you are trying to open is not installed on this device.',
+            );
+          }
+        })
+        .catch(() =>
+          Alert.alert(
+            'Error',
+            'An error occurred while trying to open the app.',
+          ),
+        );
+    }
+
+    if (data === 'camera') {
+      requestCameraPermission();
+      return;
+    }
+
+    if (Platform.OS === 'android') {
+      if (data === 'power') {
+        sendIntent({action: 'android.intent.action.POWER_USAGE_SUMMARY'});
+        return;
+      }
+    }
+  };
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <SafeAreaView style={styles.container}>
+      <WebView
+        onMessage={onMessage}
+        source={{uri: 'https://demo.wetop.me/tiptap-editor/'}}
+        style={styles.webview}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
+  container: {flex: 1},
+  webview: {flex: 1},
 });
 
 export default App;
