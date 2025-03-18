@@ -2,7 +2,6 @@
 import React from 'react';
 import {
   SafeAreaView,
-  StyleSheet,
   Linking,
   Alert,
   Platform,
@@ -10,16 +9,7 @@ import {
 } from 'react-native';
 import WebView from 'react-native-webview';
 
-type SendIntentButtonProps = {
-  action: string;
-  children?: string;
-  extras?: Array<{
-    key: string;
-    value: string | number | boolean;
-  }>;
-};
-
-const App = () => {
+const SettingsScreen: React.FC = () => {
   // const webviewRef = useRef();
   function onMessage(data: any) {
     if (data.nativeEvent.data) {
@@ -31,7 +21,7 @@ const App = () => {
       }
     }
   }
-  const sendIntent = async ({action, extras}: SendIntentButtonProps) => {
+  const sendIntent = async ({ action, extras }: SendIntentButtonProps) => {
     if (Platform.OS === 'android') {
       try {
         await Linking.sendIntent(action, extras);
@@ -42,7 +32,7 @@ const App = () => {
   };
   const openCamera = () => {
     if (Platform.OS === 'android') {
-      sendIntent({action: 'android.media.action.IMAGE_CAPTURE'});
+      sendIntent({ action: 'android.media.action.IMAGE_CAPTURE' });
       return;
     }
     // const result = await ImagePicker.launchCameraAsync({
@@ -76,10 +66,10 @@ const App = () => {
     }
   };
   const openPhoto = () => {
-    if (Platform.OS === "android") {
-      Linking.openURL("content://media/internal/images/media");
+    if (Platform.OS === 'android') {
+      Linking.openURL('content://media/internal/images/media');
     } else {
-      Linking.openURL("photos-redirect://");
+      Linking.openURL('photos-redirect://');
     }
   };
   const openApp = (data: any) => {
@@ -91,7 +81,7 @@ const App = () => {
     if (data === 'youtube') {
       const url = 'https://www.youtube.com/';
       Linking.canOpenURL(url)
-        .then(supported => {
+        .then((supported) => {
           console.log(supported);
           if (supported) {
             Linking.openURL(url);
@@ -117,25 +107,21 @@ const App = () => {
 
     if (Platform.OS === 'android') {
       if (data === 'power') {
-        sendIntent({action: 'android.intent.action.POWER_USAGE_SUMMARY'});
+        sendIntent({ action: 'android.intent.action.POWER_USAGE_SUMMARY' });
         return;
       }
     }
   };
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1 }}>
       <WebView
         onMessage={onMessage}
-        source={{uri: 'https://demo.wetop.me/tiptap-editor/'}}
-        style={styles.webview}
+        source={{ uri: 'https://demo.wetop.me/tiptap-editor/' }}
+        originWhitelist={['*']}
+        mixedContentMode="compatibility"
       />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {flex: 1},
-  webview: {flex: 1},
-});
-
-export default App;
+export default SettingsScreen;
